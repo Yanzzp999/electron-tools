@@ -27,4 +27,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listDirectory(targetPath?: string) {
     return ipcRenderer.invoke('fs:list', targetPath)
   },
+  renameBulk(payload: {
+    rootPath?: string
+    findText: string
+    replaceText: string
+    recursive?: boolean
+  }) {
+    return ipcRenderer.invoke('fs:rename-bulk', payload)
+  },
+  deleteBulk(payload: { rootPath?: string; keyword: string; recursive?: boolean; dryRun?: boolean }) {
+    return ipcRenderer.invoke('fs:delete-bulk', payload)
+  },
 })

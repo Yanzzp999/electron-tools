@@ -89,6 +89,201 @@ ipcMain.handle("fs:list", async (_event, targetPath) => {
     };
   }
 });
+ipcMain.handle("fs:rename-bulk", async (_event, payload) => {
+  const rootPath = resolveTargetPath(payload == null ? void 0 : payload.rootPath);
+  const findText = (payload == null ? void 0 : payload.findText) ?? "";
+  const replaceText = (payload == null ? void 0 : payload.replaceText) ?? "";
+  const recursive = Boolean(payload == null ? void 0 : payload.recursive);
+  if (!findText.trim()) {
+    return {
+      root: rootPath,
+      renamed: 0,
+      skipped: 0,
+      failed: 0,
+      details: [],
+      error: "Find text is required"
+    };
+  }
+  let rootStat;
+  try {
+    rootStat = await fs.stat(rootPath);
+  } catch (error) {
+    return {
+      root: rootPath,
+      renamed: 0,
+      skipped: 0,
+      failed: 0,
+      details: [],
+      error: error instanceof Error ? error.message : "Root path not accessible"
+    };
+  }
+  if (!rootStat.isDirectory()) {
+    return {
+      root: rootPath,
+      renamed: 0,
+      skipped: 0,
+      failed: 0,
+      details: [],
+      error: "Root path must be a directory"
+    };
+  }
+  let renamed = 0;
+  let skipped = 0;
+  let failed = 0;
+  const details = [];
+  const queue = [rootPath];
+  while (queue.length) {
+    const current = queue.shift();
+    let dirents;
+    try {
+      dirents = await fs.readdir(current, { withFileTypes: true });
+    } catch (error) {
+      failed += 1;
+      details.push({
+        from: current,
+        error: error instanceof Error ? error.message : "Unable to read directory"
+      });
+      continue;
+    }
+    for (const dirent of dirents) {
+      const originalPath = path.join(current, dirent.name);
+      let nextPath = originalPath;
+      const nextName = dirent.name.replace(findText, replaceText);
+      const shouldRename = nextName !== dirent.name;
+      if (shouldRename) {
+        const targetPath = path.join(current, nextName);
+        try {
+          try {
+            await fs.stat(targetPath);
+            throw new Error("Target name already exists");
+          } catch {
+          }
+          await fs.rename(originalPath, targetPath);
+          renamed += 1;
+          nextPath = targetPath;
+          details.push({ from: originalPath, to: targetPath });
+        } catch (error) {
+          failed += 1;
+          nextPath = originalPath;
+          details.push({
+            from: originalPath,
+            error: error instanceof Error ? error.message : "Rename failed"
+          });
+        }
+      } else {
+        skipped += 1;
+      }
+      if (recursive && dirent.isDirectory()) {
+        queue.push(nextPath);
+      }
+    }
+  }
+  return {
+    root: rootPath,
+    renamed,
+    skipped,
+    failed,
+    details
+  };
+});
+ipcMain.handle("fs:delete-bulk", async (_event, payload) => {
+  const rootPath = resolveTargetPath(payload == null ? void 0 : payload.rootPath);
+  const keyword = (payload == null ? void 0 : payload.keyword) ?? "";
+  const recursive = Boolean(payload == null ? void 0 : payload.recursive);
+  const dryRun = Boolean(payload == null ? void 0 : payload.dryRun);
+  if (!keyword.trim()) {
+    return {
+      root: rootPath,
+      matched: 0,
+      deleted: 0,
+      failed: 0,
+      details: [],
+      error: "Keyword is required"
+    };
+  }
+  let rootStat;
+  try {
+    rootStat = await fs.stat(rootPath);
+  } catch (error) {
+    return {
+      root: rootPath,
+      matched: 0,
+      deleted: 0,
+      failed: 0,
+      details: [],
+      error: error instanceof Error ? error.message : "Root path not accessible"
+    };
+  }
+  if (!rootStat.isDirectory()) {
+    return {
+      root: rootPath,
+      matched: 0,
+      deleted: 0,
+      failed: 0,
+      details: [],
+      error: "Root path must be a directory"
+    };
+  }
+  const queue = [rootPath];
+  let matched = 0;
+  let deleted = 0;
+  let failed = 0;
+  const details = [];
+  while (queue.length) {
+    const current = queue.shift();
+    let dirents;
+    try {
+      dirents = await fs.readdir(current, { withFileTypes: true });
+    } catch (error) {
+      failed += 1;
+      details.push({
+        path: current,
+        isDirectory: true,
+        error: error instanceof Error ? error.message : "Unable to read directory"
+      });
+      continue;
+    }
+    for (const dirent of dirents) {
+      const itemPath = path.join(current, dirent.name);
+      const isDir = dirent.isDirectory();
+      const hasKeyword = dirent.name.includes(keyword);
+      if (hasKeyword) {
+        matched += 1;
+        if (dryRun) {
+          details.push({ path: itemPath, isDirectory: isDir, deleted: false });
+        } else {
+          try {
+            if (isDir) {
+              await fs.rm(itemPath, { recursive: true, force: true });
+            } else {
+              await fs.unlink(itemPath);
+            }
+            deleted += 1;
+            details.push({ path: itemPath, isDirectory: isDir, deleted: true });
+          } catch (error) {
+            failed += 1;
+            details.push({
+              path: itemPath,
+              isDirectory: isDir,
+              error: error instanceof Error ? error.message : "Delete failed"
+            });
+          }
+          if (isDir) continue;
+        }
+      }
+      if (recursive && isDir) {
+        queue.push(itemPath);
+      }
+    }
+  }
+  return {
+    root: rootPath,
+    matched,
+    deleted,
+    failed,
+    details
+  };
+});
 export {
   MAIN_DIST,
   RENDERER_DIST,

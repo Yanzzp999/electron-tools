@@ -23,5 +23,11 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 electron.contextBridge.exposeInMainWorld("electronAPI", {
   listDirectory(targetPath) {
     return electron.ipcRenderer.invoke("fs:list", targetPath);
+  },
+  renameBulk(payload) {
+    return electron.ipcRenderer.invoke("fs:rename-bulk", payload);
+  },
+  deleteBulk(payload) {
+    return electron.ipcRenderer.invoke("fs:delete-bulk", payload);
   }
 });
