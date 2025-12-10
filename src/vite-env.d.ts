@@ -56,10 +56,65 @@ export type DeleteResult = {
   error?: string
 }
 
+export type AppConfigInput = {
+  startPath?: string
+  hideHidden?: boolean
+  ignoreSuffixes?: string[] | string
+  columns?: {
+    showType?: boolean
+    showModified?: boolean
+    showSize?: boolean
+  }
+  sort?: {
+    field?: 'name' | 'modified' | 'size'
+    order?: 'asc' | 'desc'
+  }
+  rainbow?: {
+    speed?: number
+    direction?: 'normal' | 'reverse'
+  }
+  tools?: {
+    rename?: { recursive?: boolean }
+    delete?: { recursive?: boolean }
+  }
+}
+
+export type ResolvedAppConfig = {
+  startPath?: string
+  hideHidden: boolean
+  ignoreSuffixes: string[]
+  columns: {
+    showType: boolean
+    showModified: boolean
+    showSize: boolean
+  }
+  sort: {
+    field: 'name' | 'modified' | 'size'
+    order: 'asc' | 'desc'
+  }
+  rainbow: {
+    speed: number
+    direction: 'normal' | 'reverse'
+  }
+  tools: {
+    rename: { recursive: boolean }
+    delete: { recursive: boolean }
+  }
+}
+
+export type ConfigSnapshot = {
+  path: string
+  exists: boolean
+  config: ResolvedAppConfig
+  error?: string
+}
+
 declare global {
   interface Window {
     electronAPI: {
       listDirectory: (targetPath?: string) => Promise<DirectorySnapshot>
+      getConfig: () => Promise<ConfigSnapshot>
+      saveConfig: (config: AppConfigInput) => Promise<ConfigSnapshot>
       renameBulk: (payload: RenameRequest) => Promise<RenameResult>
       deleteBulk: (payload: DeleteRequest) => Promise<DeleteResult>
     }

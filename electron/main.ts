@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import type { Dirent, Stats } from 'node:fs'
 import fs from 'node:fs/promises'
+import YAML from 'yaml'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -28,6 +29,198 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 const IS_DEV = Boolean(VITE_DEV_SERVER_URL)
 const IS_MAC = process.platform === 'darwin'
+const CONFIG_FILENAME = 'app.config.yaml'
+const CONFIG_PATH = path.join(process.env.APP_ROOT, CONFIG_FILENAME)
+
+type AppConfigInput = {
+  startPath?: string
+  hideHidden?: boolean
+  ignoreSuffixes?: string[] | string
+  columns?: {
+    showType?: boolean
+    showModified?: boolean
+    showSize?: boolean
+  }
+  sort?: {
+    field?: 'name' | 'modified' | 'size'
+    order?: 'asc' | 'desc'
+  }
+  rainbow?: {
+    speed?: number
+    direction?: 'normal' | 'reverse'
+  }
+  tools?: {
+    rename?: { recursive?: boolean }
+    delete?: { recursive?: boolean }
+  }
+}
+
+type ResolvedAppConfig = {
+  startPath?: string
+  hideHidden: boolean
+  ignoreSuffixes: string[]
+  columns: {
+    showType: boolean
+    showModified: boolean
+    showSize: boolean
+  }
+  sort: {
+    field: 'name' | 'modified' | 'size'
+    order: 'asc' | 'desc'
+  }
+  rainbow: {
+    speed: number
+    direction: 'normal' | 'reverse'
+  }
+  tools: {
+    rename: { recursive: boolean }
+    delete: { recursive: boolean }
+  }
+}
+
+type ConfigSnapshot = {
+  path: string
+  exists: boolean
+  config: ResolvedAppConfig
+  error?: string
+}
+
+const DEFAULT_CONFIG: ResolvedAppConfig = {
+  startPath: '',
+  hideHidden: true,
+  ignoreSuffixes: ['.exe', '.app'],
+  columns: {
+    showType: true,
+    showModified: true,
+    showSize: true,
+  },
+  sort: {
+    field: 'name',
+    order: 'asc',
+  },
+  rainbow: {
+    speed: 8,
+    direction: 'normal',
+  },
+  tools: {
+    rename: { recursive: true },
+    delete: { recursive: true },
+  },
+}
+
+function toBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function clampNumber(value: unknown, fallback: number, min: number, max: number) {
+  const num = Number(value)
+  if (Number.isFinite(num)) {
+    return Math.min(max, Math.max(min, num))
+  }
+  return fallback
+}
+
+function normalizeIgnoreSuffixes(raw?: string[] | string) {
+  if (!raw) return DEFAULT_CONFIG.ignoreSuffixes
+  const list = Array.isArray(raw) ? raw : raw.split(/[,\s]+/)
+  return list
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => (item.startsWith('.') ? item.toLowerCase() : `.${item.toLowerCase()}`))
+}
+
+function normalizeConfig(raw?: AppConfigInput): ResolvedAppConfig {
+  const columns = raw?.columns ?? {}
+  const sort = raw?.sort ?? {}
+  const rainbow = raw?.rainbow ?? {}
+  const tools = raw?.tools ?? {}
+
+  return {
+    startPath: typeof raw?.startPath === 'string' ? raw.startPath : DEFAULT_CONFIG.startPath,
+    hideHidden: toBoolean(raw?.hideHidden, DEFAULT_CONFIG.hideHidden),
+    ignoreSuffixes: normalizeIgnoreSuffixes(raw?.ignoreSuffixes),
+    columns: {
+      showType: toBoolean(columns.showType, DEFAULT_CONFIG.columns.showType),
+      showModified: toBoolean(columns.showModified, DEFAULT_CONFIG.columns.showModified),
+      showSize: toBoolean(columns.showSize, DEFAULT_CONFIG.columns.showSize),
+    },
+    sort: {
+      field: sort.field === 'modified' || sort.field === 'size' ? sort.field : DEFAULT_CONFIG.sort.field,
+      order: sort.order === 'desc' ? 'desc' : DEFAULT_CONFIG.sort.order,
+    },
+    rainbow: {
+      speed: clampNumber(rainbow.speed, DEFAULT_CONFIG.rainbow.speed, 1, 60),
+      direction: rainbow.direction === 'reverse' ? 'reverse' : DEFAULT_CONFIG.rainbow.direction,
+    },
+    tools: {
+      rename: {
+        recursive: toBoolean(tools.rename?.recursive, DEFAULT_CONFIG.tools.rename.recursive),
+      },
+      delete: {
+        recursive: toBoolean(tools.delete?.recursive, DEFAULT_CONFIG.tools.delete.recursive),
+      },
+    },
+  }
+}
+
+async function readConfigFile(): Promise<ConfigSnapshot> {
+  const fallback = normalizeConfig()
+
+  try {
+    const raw = await fs.readFile(CONFIG_PATH, 'utf-8')
+    try {
+      const parsed = YAML.parse(raw) as AppConfigInput | null
+      return {
+        path: CONFIG_PATH,
+        exists: true,
+        config: normalizeConfig(parsed ?? undefined),
+      }
+    } catch (error) {
+      return {
+        path: CONFIG_PATH,
+        exists: true,
+        config: fallback,
+        error: error instanceof Error ? error.message : 'Invalid YAML format',
+      }
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+      return {
+        path: CONFIG_PATH,
+        exists: false,
+        config: fallback,
+        error: 'Config file not found, using defaults',
+      }
+    }
+    return {
+      path: CONFIG_PATH,
+      exists: false,
+      config: fallback,
+      error: error instanceof Error ? error.message : 'Unable to read config file',
+    }
+  }
+}
+
+async function writeConfigFile(payload?: AppConfigInput): Promise<ConfigSnapshot> {
+  const normalized = normalizeConfig(payload)
+  const yamlText = YAML.stringify({
+    startPath: normalized.startPath,
+    hideHidden: normalized.hideHidden,
+    ignoreSuffixes: normalized.ignoreSuffixes,
+    columns: normalized.columns,
+    sort: normalized.sort,
+    rainbow: normalized.rainbow,
+    tools: normalized.tools,
+  })
+
+  await fs.writeFile(CONFIG_PATH, yamlText, 'utf-8')
+
+  return {
+    path: CONFIG_PATH,
+    exists: true,
+    config: normalized,
+  }
+}
 
 let win: BrowserWindow | null
 
@@ -138,6 +331,23 @@ type DeleteResult = {
   details: DeleteDetail[]
   error?: string
 }
+
+ipcMain.handle('config:get', async (): Promise<ConfigSnapshot> => {
+  return readConfigFile()
+})
+
+ipcMain.handle('config:save', async (_event, payload: AppConfigInput): Promise<ConfigSnapshot> => {
+  try {
+    return await writeConfigFile(payload)
+  } catch (error) {
+    return {
+      path: CONFIG_PATH,
+      exists: false,
+      config: normalizeConfig(),
+      error: error instanceof Error ? error.message : 'Unable to save config file',
+    }
+  }
+})
 
 function resolveTargetPath(targetPath?: string) {
   // In dev, default to project root to make testing paths easier; otherwise use user home.

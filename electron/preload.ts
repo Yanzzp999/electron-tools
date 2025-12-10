@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listDirectory(targetPath?: string) {
     return ipcRenderer.invoke('fs:list', targetPath)
   },
+  getConfig() {
+    return ipcRenderer.invoke('config:get')
+  },
+  saveConfig(config: unknown) {
+    return ipcRenderer.invoke('config:save', config)
+  },
   renameBulk(payload: {
     rootPath?: string
     findText: string

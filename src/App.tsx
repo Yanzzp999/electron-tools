@@ -1,5 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { DeleteResult, DirectoryEntry, RenameResult } from './vite-env'
+import type {
+  ConfigSnapshot,
+  DeleteResult,
+  DirectoryEntry,
+  RenameResult,
+  ResolvedAppConfig,
+} from './vite-env'
 import './App.css'
 
 const Icon = {
@@ -73,6 +79,10 @@ function App() {
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const historyIndexRef = useRef(-1)
+  const [configMeta, setConfigMeta] = useState<{ path: string; exists: boolean } | null>(null)
+  const [configError, setConfigError] = useState<string | null>(null)
+  const [configLoading, setConfigLoading] = useState(false)
+  const firstLoadRef = useRef(true)
   const [hideHidden, setHideHidden] = useState(true)
   const [ignoreInput, setIgnoreInput] = useState('.exe,.app')
   const [showFilters, setShowFilters] = useState(false)
@@ -154,6 +164,19 @@ function App() {
     return parts.join(' ')
   }, [showType, showModified, showSize])
 
+  const applyConfig = useCallback((config: ResolvedAppConfig) => {
+    setHideHidden(config.hideHidden)
+    setIgnoreInput(config.ignoreSuffixes.join(','))
+    setShowType(config.columns.showType)
+    setShowModified(config.columns.showModified)
+    setShowSize(config.columns.showSize)
+    setSortField(config.sort.field)
+    setSortOrder(config.sort.order)
+    setRainbowSpeed(config.rainbow.speed)
+    setRainbowDirection(config.rainbow.direction)
+    setRenameRecursive(config.tools.rename.recursive)
+    setDeleteRecursive(config.tools.delete.recursive)
+  }, [])
   useEffect(() => {
     document.documentElement.style.setProperty('--rainbow-duration', `${rainbowSpeed}s`)
     document.documentElement.style.setProperty('--rainbow-direction', rainbowDirection)
@@ -193,9 +216,68 @@ function App() {
     [],
   )
 
+  const loadConfig = useCallback(
+    async (applyStartPath: boolean) => {
+      setConfigLoading(true)
+      try {
+        const snapshot = (await window.electronAPI.getConfig()) as ConfigSnapshot
+        setConfigMeta({ path: snapshot.path, exists: snapshot.exists })
+        setConfigError(snapshot.error ?? null)
+        applyConfig(snapshot.config)
+
+        if (applyStartPath) {
+          await loadDirectory(snapshot.config.startPath || undefined, true)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '加载配置失败'
+        setConfigError(message)
+        if (applyStartPath) {
+          await loadDirectory(undefined, true)
+        }
+      } finally {
+        setConfigLoading(false)
+        firstLoadRef.current = false
+      }
+    },
+    [applyConfig, loadDirectory],
+  )
+
   useEffect(() => {
-    loadDirectory()
-  }, [loadDirectory])
+    if (firstLoadRef.current) {
+      loadConfig(true)
+    }
+  }, [loadConfig])
+
+  useEffect(() => {
+    const rootEl = document.getElementById('root')
+    const listEl = listRef.current
+    const cleanups: Array<() => void> = []
+
+    const attachVisibility = (el: HTMLElement | null) => {
+      if (!el) return
+      let hideTimer: number | undefined
+      const show = () => {
+        el.classList.add('show-scrollbar')
+        if (hideTimer) window.clearTimeout(hideTimer)
+        hideTimer = window.setTimeout(() => {
+          el.classList.remove('show-scrollbar')
+        }, 800)
+      }
+      el.addEventListener('scroll', show, { passive: true })
+      cleanups.push(() => {
+        el.removeEventListener('scroll', show)
+        if (hideTimer) window.clearTimeout(hideTimer)
+        el.classList.remove('show-scrollbar')
+      })
+    }
+
+    attachVisibility(rootEl)
+    attachVisibility(listEl)
+
+    return () => {
+      cleanups.forEach((fn) => fn())
+    }
+  }, [])
 
   useEffect(() => {
     const rootEl = document.getElementById('root')
@@ -385,6 +467,29 @@ function App() {
           <Icon.Tools />
         </button>
       </header>
+
+      <section className="config-bar">
+        <div className="config-info">
+          <span className={`config-dot ${configMeta?.exists ? 'ok' : 'warn'}`} aria-hidden />
+          <span className="config-label">配置文件</span>
+          <span className="config-path">{configMeta?.path ?? '加载中...'}</span>
+          {configError && <span className="config-status error">{configError}</span>}
+          {!configError && configMeta && !configMeta.exists && (
+            <span className="config-status warn">未找到，使用默认值</span>
+          )}
+        </div>
+        <div className="config-actions">
+          <button
+            type="button"
+            className="secondary-btn config-btn"
+            onClick={() => loadConfig(false)}
+            disabled={configLoading}
+          >
+            {configLoading ? '重载中...' : '重载配置'}
+          </button>
+          <span className="config-hint">修改根目录 app.config.yaml 后重载</span>
+        </div>
+      </section>
 
       {showFilters && (
         <section className="filter-panel">

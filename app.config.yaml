@@ -1,0 +1,21 @@
+# App configuration; click "Reload config" in UI after editing
+startPath: ""
+hideHidden: true
+ignoreSuffixes:
+  - .exe
+  - .app
+columns:
+  showType: true
+  showModified: true
+  showSize: true
+sort:
+  field: name
+  order: asc
+rainbow:
+  speed: 2
+  direction: normal
+tools:
+  rename:
+    recursive: true
+  delete:
+    recursive: true

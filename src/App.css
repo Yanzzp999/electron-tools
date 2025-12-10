@@ -9,45 +9,35 @@
 /* 默认隐藏滚动条，滚动时再显示（根容器与列表容器） */
 #root,
 .list-body {
-  /* 先隐藏 Firefox 的滚动条 */
   scrollbar-width: none;
-  scrollbar-color: transparent transparent;
-  /* 在不支持 overlay 时仍可滚动 */
-  overflow-y: auto;
-}
-
-@supports (overflow: overlay) {
-  #root,
-  .list-body {
-    overflow-y: overlay;
-  }
 }
 
 #root::-webkit-scrollbar,
 .list-body::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-#root::-webkit-scrollbar-thumb,
-.list-body::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 8px;
+  width: 0;
+  height: 0;
 }
 
 #root.show-scrollbar,
 .list-body.show-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+  scrollbar-color: #4b5563 transparent;
+}
+
+#root.show-scrollbar::-webkit-scrollbar,
+.list-body.show-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
 #root.show-scrollbar::-webkit-scrollbar-thumb,
 .list-body.show-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.7);
+  border-radius: 8px;
 }
 
-#root::-webkit-scrollbar-track,
-.list-body::-webkit-scrollbar-track {
+#root.show-scrollbar::-webkit-scrollbar-track,
+.list-body.show-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -164,6 +154,79 @@
   border-radius: 10px;
   padding: 10px 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.config-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #0b1221;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.config-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.config-label {
+  color: #9ca3af;
+}
+
+.config-path {
+  color: #93c5fd;
+  word-break: break-all;
+}
+
+.config-status {
+  font-size: 13px;
+}
+
+.config-status.warn {
+  color: #fbbf24;
+}
+
+.config-status.error {
+  color: #fca5a5;
+}
+
+.config-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.config-btn {
+  width: auto;
+  padding: 8px 12px;
+}
+
+.config-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  display: inline-block;
+}
+
+.config-dot.ok {
+  background: #34d399;
+}
+
+.config-dot.warn {
+  background: #f59e0b;
 }
 
 .checkbox {
