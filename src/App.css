@@ -199,6 +199,10 @@
   color: #fca5a5;
 }
 
+.config-status.success {
+  color: #34d399;
+}
+
 .config-actions {
   display: inline-flex;
   align-items: center;
@@ -211,6 +215,10 @@
 .config-btn {
   width: auto;
   padding: 8px 12px;
+}
+
+.config-btn.primary-btn {
+  width: auto;
 }
 
 .config-dot {

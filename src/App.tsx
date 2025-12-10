@@ -82,9 +82,11 @@ function App() {
   const [configMeta, setConfigMeta] = useState<{ path: string; exists: boolean } | null>(null)
   const [configError, setConfigError] = useState<string | null>(null)
   const [configLoading, setConfigLoading] = useState(false)
+  const [configStatus, setConfigStatus] = useState<string | null>(null)
+  const [configSaving, setConfigSaving] = useState(false)
   const firstLoadRef = useRef(true)
   const [hideHidden, setHideHidden] = useState(true)
-  const [ignoreInput, setIgnoreInput] = useState('.exe,.app')
+  const [ignoreInput, setIgnoreInput] = useState('exe,app')
   const [showFilters, setShowFilters] = useState(false)
   const [showTools, setShowTools] = useState(false)
   const [sortField, setSortField] = useState<'name' | 'modified' | 'size'>('name')
@@ -132,6 +134,13 @@ function App() {
       .map((item) => (item.startsWith('.') ? item : `.${item}`))
   }, [ignoreInput])
 
+  const ignoreSuffixesRaw = useMemo(() => {
+    return ignoreInput
+      .split(/[,\s]+/)
+      .map((item) => item.trim().toLowerCase().replace(/^\./, ''))
+      .filter(Boolean)
+  }, [ignoreInput])
+
   const visibleEntries = useMemo(() => {
     const filtered = entries.filter((entry) => {
       if (hideHidden && entry.name.startsWith('.')) return false
@@ -166,7 +175,12 @@ function App() {
 
   const applyConfig = useCallback((config: ResolvedAppConfig) => {
     setHideHidden(config.hideHidden)
-    setIgnoreInput(config.ignoreSuffixes.join(','))
+    setIgnoreInput(
+      config.ignoreSuffixes
+        .map((item) => item.replace(/^\./, ''))
+        .filter(Boolean)
+        .join(','),
+    )
     setShowType(config.columns.showType)
     setShowModified(config.columns.showModified)
     setShowSize(config.columns.showSize)
@@ -218,6 +232,7 @@ function App() {
 
   const loadConfig = useCallback(
     async (applyStartPath: boolean) => {
+      setConfigStatus(null)
       setConfigLoading(true)
       try {
         const snapshot = (await window.electronAPI.getConfig()) as ConfigSnapshot
@@ -241,6 +256,59 @@ function App() {
     },
     [applyConfig, loadDirectory],
   )
+
+  const handleSaveConfig = useCallback(async () => {
+    setConfigSaving(true)
+    setConfigStatus(null)
+    try {
+      const payload: ConfigSnapshot['config'] & { startPath?: string } = {
+        startPath: pathInput.trim() || undefined,
+        hideHidden,
+        ignoreSuffixes: ignoreSuffixesRaw,
+        columns: {
+          showType,
+          showModified,
+          showSize,
+        },
+        sort: {
+          field: sortField,
+          order: sortOrder,
+        },
+        rainbow: {
+          speed: rainbowSpeed,
+          direction: rainbowDirection,
+        },
+        tools: {
+          rename: { recursive: renameRecursive },
+          delete: { recursive: deleteRecursive },
+        },
+      }
+
+      const snapshot = (await window.electronAPI.saveConfig(payload)) as ConfigSnapshot
+      setConfigMeta({ path: snapshot.path, exists: snapshot.exists })
+      setConfigError(snapshot.error ?? null)
+      applyConfig(snapshot.config)
+      setConfigStatus(snapshot.error ? `保存失败：${snapshot.error}` : '保存成功')
+    } catch (error) {
+      setConfigStatus(error instanceof Error ? `保存失败：${error.message}` : '保存失败')
+    } finally {
+      setConfigSaving(false)
+    }
+  }, [
+    applyConfig,
+    deleteRecursive,
+    hideHidden,
+    ignoreSuffixesRaw,
+    pathInput,
+    rainbowDirection,
+    rainbowSpeed,
+    renameRecursive,
+    showModified,
+    showSize,
+    showType,
+    sortField,
+    sortOrder,
+  ])
 
   useEffect(() => {
     if (firstLoadRef.current) {
@@ -481,13 +549,26 @@ function App() {
         <div className="config-actions">
           <button
             type="button"
+            className="primary-btn config-btn"
+            onClick={handleSaveConfig}
+            disabled={configLoading || configSaving}
+          >
+            {configSaving ? '保存中...' : '保存配置'}
+          </button>
+          <button
+            type="button"
             className="secondary-btn config-btn"
             onClick={() => loadConfig(false)}
-            disabled={configLoading}
+            disabled={configLoading || configSaving}
           >
             {configLoading ? '重载中...' : '重载配置'}
           </button>
-          <span className="config-hint">修改根目录 app.config.yaml 后重载</span>
+          {configStatus && (
+            <span className={`config-status ${configStatus.includes('失败') ? 'error' : 'success'}`}>
+              {configStatus}
+            </span>
+          )}
+          <span className="config-hint">修改根目录 app.config.yaml 后保存或重载</span>
         </div>
       </section>
 
@@ -502,11 +583,11 @@ function App() {
             <span>Hide files starting with "."</span>
           </label>
           <div className="filter-input">
-            <span>Ignore suffixes (comma separated):</span>
+            <span>忽略文件后缀（逗号/空格分隔，无需加点）:</span>
             <input
               value={ignoreInput}
               onChange={(event) => setIgnoreInput(event.target.value)}
-              placeholder=".exe,.app"
+              placeholder="exe,app"
             />
           </div>
           <div className="columns-group">

@@ -6996,15 +6996,22 @@ async function readConfigFile() {
 }
 async function writeConfigFile(payload) {
   const normalized = normalizeConfig(payload);
-  const yamlText = dist.stringify({
+  const storedIgnoreSuffixes = normalized.ignoreSuffixes.map((item) => item.replace(/^\./, "")).filter(Boolean);
+  const doc = new dist.Document();
+  doc.contents = doc.createNode({
     startPath: normalized.startPath,
     hideHidden: normalized.hideHidden,
-    ignoreSuffixes: normalized.ignoreSuffixes,
+    ignoreSuffixes: storedIgnoreSuffixes,
     columns: normalized.columns,
     sort: normalized.sort,
     rainbow: normalized.rainbow,
     tools: normalized.tools
   });
+  const ignoreNode = doc.get("ignoreSuffixes", true);
+  if (ignoreNode instanceof dist.YAMLSeq) {
+    ignoreNode.flow = true;
+  }
+  const yamlText = doc.toString();
   await fs.writeFile(CONFIG_PATH, yamlText, "utf-8");
   return {
     path: CONFIG_PATH,

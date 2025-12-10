@@ -1,9 +1,6 @@
-# App configuration; click "Reload config" in UI after editing
-startPath: ""
+startPath: /Users/yanzzp/Documents/CodeProjects/electron-tools
 hideHidden: true
-ignoreSuffixes:
-  - .exe
-  - .app
+ignoreSuffixes: [ exe, app ]
 columns:
   showType: true
   showModified: true
