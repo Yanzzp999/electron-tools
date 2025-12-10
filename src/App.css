@@ -6,9 +6,49 @@
   color-scheme: dark;
 }
 
-* {
-  scrollbar-width: auto;
-  scrollbar-color: auto;
+/* 默认隐藏滚动条，滚动时再显示（根容器与列表容器） */
+#root,
+.list-body {
+  /* 先隐藏 Firefox 的滚动条 */
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+  /* 在不支持 overlay 时仍可滚动 */
+  overflow-y: auto;
+}
+
+@supports (overflow: overlay) {
+  #root,
+  .list-body {
+    overflow-y: overlay;
+  }
+}
+
+#root::-webkit-scrollbar,
+.list-body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+#root::-webkit-scrollbar-thumb,
+.list-body::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 8px;
+}
+
+#root.show-scrollbar,
+.list-body.show-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+#root.show-scrollbar::-webkit-scrollbar-thumb,
+.list-body.show-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+#root::-webkit-scrollbar-track,
+.list-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .app-shell {
@@ -19,12 +59,30 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+  isolation: isolate;
+}
+
+.app-shell.mac {
+  padding-top: 36px;
+}
+
+.app-shell.mac .toolbar {
+  -webkit-app-region: drag;
+  padding-left: 12px;
+}
+
+.app-shell.mac .toolbar button,
+.app-shell.mac .toolbar input,
+.app-shell.mac .toolbar form {
+  -webkit-app-region: no-drag;
 }
 
 .toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   background: #0b1221;
   border: 1px solid #1f2937;
   border-radius: 10px;
@@ -33,8 +91,20 @@
 }
 
 .nav-group {
-  display: inline-flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(44px, 1fr);
   gap: 8px;
+  align-items: center;
+}
+
+.nav-group button {
+  width: 42px;
+  height: 42px;
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
 }
 
 .toolbar button {
@@ -88,6 +158,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
   background: #0b1221;
   border: 1px solid #1f2937;
   border-radius: 10px;
@@ -128,13 +199,9 @@
 }
 
 .icon {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
   display: block;
   margin: 0 auto;
 }
@@ -143,6 +210,7 @@
   flex: 1;
   display: flex;
   gap: 10px;
+  width: 100%;
 }
 
 .path-form input {
@@ -155,13 +223,18 @@
 }
 
 .path-form button {
-  padding: 10px 14px;
+  width: 42px;
+  height: 42px;
+  min-width: 0;
+  padding: 0;
   border-radius: 8px;
   border: 1px solid #2563eb;
   background: #2563eb;
   color: #fff;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.1s ease;
+  display: grid;
+  place-items: center;
 }
 
 .path-form button:hover:not(:disabled) {
@@ -267,6 +340,26 @@
 
 .group-label {
   color: #9ca3af;
+}
+
+.rainbow-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #d1d5db;
+}
+
+.rainbow-slider {
+  width: 200px;
+  accent-color: #60a5fa;
+}
+
+.rainbow-speed-value {
+  min-width: 54px;
+  text-align: right;
+  color: #93c5fd;
+  font-variant-numeric: tabular-nums;
 }
 
 .tool-card {

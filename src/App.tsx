@@ -5,41 +5,32 @@ import './App.css'
 const Icon = {
   Back: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M10 7l-5 5 5 5" />
-      <path d="M19 12H6" />
+      <path d="M19 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H19v-2z" />
     </svg>
   ),
   Forward: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M14 7l5 5-5 5" />
-      <path d="M5 12h13" />
+      <path d="M5 13h11.17l-5.59 5.59L12 20l8-8-8-8-1.41 1.41L16.17 11H5v2z" />
     </svg>
   ),
   Up: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M12 19V5" />
-      <path d="M6 11l6-6 6 6" />
+      <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" />
     </svg>
   ),
   Refresh: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M3 12a9 9 0 0115-6.364L21 3" />
-      <path d="M21 9v-6h-6" />
-      <path d="M21 12a9 9 0 01-15 6.364L3 21" />
-      <path d="M3 15v6h6" />
+      <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
     </svg>
   ),
   Settings: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
-      <path d="M19.4 15a1.8 1.8 0 00.36 1.98l.05.05a2 2 0 01-2.83 2.83l-.05-.05a1.8 1.8 0 00-1.98-.36 1.8 1.8 0 00-1.08 1.64V21a2 2 0 01-4 0v-.1a1.8 1.8 0 00-1.08-1.64 1.8 1.8 0 00-1.98.36l-.05.05a2 2 0 01-2.83-2.83l.05-.05a1.8 1.8 0 00.36-1.98 1.8 1.8 0 00-1.64-1.08H3a2 2 0 010-4h.1a1.8 1.8 0 001.64-1.08 1.8 1.8 0 00-.36-1.98l-.05-.05a2 2 0 012.83-2.83l.05.05a1.8 1.8 0 001.98.36h.02A1.8 1.8 0 009 4.1V4a2 2 0 114 0v.1a1.8 1.8 0 001.08 1.64h.02a1.8 1.8 0 001.98-.36l.05-.05a2 2 0 112.83 2.83l-.05.05a1.8 1.8 0 00-.36 1.98v.02a1.8 1.8 0 001.64 1.08H21a2 2 0 010 4h-.1a1.8 1.8 0 00-1.64 1.08z" />
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
     </svg>
   ),
   Tools: () => (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden>
-      <path d="M9 3l2 2-2 2-2-2 2-2zM14 8l2 2-9 9-2-2 9-9z" />
-      <path d="M16 5l3 3-2 2-3-3z" />
-      <path d="M11 4l9 9" />
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
     </svg>
   ),
 }
@@ -88,6 +79,8 @@ function App() {
   const [showTools, setShowTools] = useState(false)
   const [sortField, setSortField] = useState<'name' | 'modified' | 'size'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [rainbowSpeed, setRainbowSpeed] = useState(8)
+  const [rainbowDirection, setRainbowDirection] = useState<'normal' | 'reverse'>('normal')
   const [showType, setShowType] = useState(true)
   const [showModified, setShowModified] = useState(true)
   const [showSize, setShowSize] = useState(true)
@@ -101,6 +94,8 @@ function App() {
   const [deletePreview, setDeletePreview] = useState<DeleteResult | null>(null)
   const [deleteStatus, setDeleteStatus] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const isMac = useMemo(() => navigator.platform.includes('Mac'), [])
+  const listRef = useRef<HTMLDivElement | null>(null)
 
   const toggleSort = useCallback(
     (field: 'name' | 'modified' | 'size') => {
@@ -159,6 +154,17 @@ function App() {
     return parts.join(' ')
   }, [showType, showModified, showSize])
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--rainbow-duration', `${rainbowSpeed}s`)
+    document.documentElement.style.setProperty('--rainbow-direction', rainbowDirection)
+  }, [rainbowSpeed, rainbowDirection])
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.style.setProperty('--columns', gridTemplateColumns)
+    }
+  }, [gridTemplateColumns])
+
   const loadDirectory = useCallback(
     async (targetPath?: string, pushHistory = true) => {
       setLoading(true)
@@ -190,6 +196,37 @@ function App() {
   useEffect(() => {
     loadDirectory()
   }, [loadDirectory])
+
+  useEffect(() => {
+    const rootEl = document.getElementById('root')
+    const listBodyEl = listRef.current?.querySelector('.list-body') as HTMLElement | null
+    const cleanups: Array<() => void> = []
+
+    const attachVisibility = (el: HTMLElement | null) => {
+      if (!el) return
+      let hideTimer: number | undefined
+      const show = () => {
+        el.classList.add('show-scrollbar')
+        if (hideTimer) window.clearTimeout(hideTimer)
+        hideTimer = window.setTimeout(() => {
+          el.classList.remove('show-scrollbar')
+        }, 800)
+      }
+      el.addEventListener('scroll', show, { passive: true })
+      cleanups.push(() => {
+        el.removeEventListener('scroll', show)
+        if (hideTimer) window.clearTimeout(hideTimer)
+        el.classList.remove('show-scrollbar')
+      })
+    }
+
+    attachVisibility(rootEl)
+    attachVisibility(listBodyEl)
+
+    return () => {
+      cleanups.forEach((fn) => fn())
+    }
+  }, [])
 
   const goBack = useCallback(() => {
     if (!canGoBack) return
@@ -239,11 +276,11 @@ function App() {
 
   const handleRename = useCallback(async () => {
     if (!currentPath) {
-      setRenameStatus('请先选择路径')
+      setRenameStatus('Select a path first')
       return
     }
     if (!renameFind.trim()) {
-      setRenameStatus('请输入要替换的关键字')
+      setRenameStatus('Enter text to replace')
       return
     }
 
@@ -258,22 +295,22 @@ function App() {
     setRenameLoading(false)
 
     if (result.error) {
-      setRenameStatus(`重命名失败：${result.error}`)
+      setRenameStatus(`Rename failed: ${result.error}`)
       return
     }
 
-    setRenameStatus(`完成：成功 ${result.renamed}，失败 ${result.failed}，跳过 ${result.skipped}`)
+    setRenameStatus(`Done: success ${result.renamed}, failed ${result.failed}, skipped ${result.skipped}`)
     loadDirectory(currentPath, false)
   }, [currentPath, loadDirectory, renameFind, renameRecursive, renameReplace])
 
   const runDelete = useCallback(
     async (dryRun: boolean) => {
       if (!currentPath) {
-        setDeleteStatus('请先选择路径')
+        setDeleteStatus('Select a path first')
         return
       }
       if (!deleteKeyword.trim()) {
-        setDeleteStatus('请输入要匹配的关键字')
+        setDeleteStatus('Enter a keyword to match')
         return
       }
 
@@ -288,16 +325,16 @@ function App() {
       setDeleteLoading(false)
 
       if (result.error) {
-        setDeleteStatus(`操作失败：${result.error}`)
+        setDeleteStatus(`Operation failed: ${result.error}`)
         return
       }
 
       if (dryRun) {
         setDeletePreview(result)
-        setDeleteStatus(`预览：匹配 ${result.matched} 个，预计删除 ${result.matched - result.failed} 个`)
+        setDeleteStatus(`Preview: matched ${result.matched}, expected to delete ${result.matched - result.failed}`)
       } else {
         setDeletePreview(null)
-        setDeleteStatus(`删除完成：成功 ${result.deleted}，失败 ${result.failed}`)
+        setDeleteStatus(`Delete done: success ${result.deleted}, failed ${result.failed}`)
         loadDirectory(currentPath, false)
       }
     },
@@ -305,7 +342,7 @@ function App() {
   )
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isMac ? ' mac' : ''}`}>
       <header className="toolbar">
         <div className="nav-group">
           <button onClick={goBack} disabled={!canGoBack} aria-label="Back">
@@ -325,17 +362,17 @@ function App() {
           <input
             value={pathInput}
             onChange={(event) => setPathInput(event.target.value)}
-            placeholder="输入路径或粘贴目录地址"
+            placeholder="Enter path or paste directory"
           />
           <button type="submit" disabled={!pathInput}>
-            跳转
+            Go
           </button>
         </form>
         <button
           className="settings-toggle"
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          aria-label="过滤设置"
+          aria-label="Filter settings"
         >
           <Icon.Settings />
         </button>
@@ -343,7 +380,7 @@ function App() {
           className="tool-toggle"
           type="button"
           onClick={() => setShowTools((v) => !v)}
-          aria-label="工具面板"
+          aria-label="Tools panel"
         >
           <Icon.Tools />
         </button>
@@ -357,10 +394,10 @@ function App() {
               checked={hideHidden}
               onChange={(event) => setHideHidden(event.target.checked)}
             />
-            <span>隐藏以 "." 开头的文件</span>
+            <span>Hide files starting with "."</span>
           </label>
           <div className="filter-input">
-            <span>忽略后缀（逗号分隔）：</span>
+            <span>Ignore suffixes (comma separated):</span>
             <input
               value={ignoreInput}
               onChange={(event) => setIgnoreInput(event.target.value)}
@@ -368,14 +405,14 @@ function App() {
             />
           </div>
           <div className="columns-group">
-            <span className="group-label">显示字段：</span>
+            <span className="group-label">Visible columns:</span>
             <label className="checkbox">
               <input
                 type="checkbox"
                 checked={showType}
                 onChange={(event) => setShowType(event.target.checked)}
               />
-              <span>类型</span>
+              <span>Type</span>
             </label>
             <label className="checkbox">
               <input
@@ -383,7 +420,7 @@ function App() {
                 checked={showModified}
                 onChange={(event) => setShowModified(event.target.checked)}
               />
-              <span>修改时间</span>
+              <span>Modified</span>
             </label>
             <label className="checkbox">
               <input
@@ -391,30 +428,52 @@ function App() {
                 checked={showSize}
                 onChange={(event) => setShowSize(event.target.checked)}
               />
-              <span>大小</span>
+              <span>Size</span>
             </label>
           </div>
+          <label className="rainbow-control">
+            <span className="group-label">彩虹边框速度 (秒/圈)</span>
+            <input
+              className="rainbow-slider"
+              type="range"
+              min={2}
+              max={20}
+              step={0.5}
+              value={rainbowSpeed}
+              aria-label="彩虹边框速度"
+              onChange={(event) => setRainbowSpeed(Number(event.target.value))}
+            />
+            <span className="rainbow-speed-value">{rainbowSpeed.toFixed(1)}s</span>
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={rainbowDirection === 'reverse'}
+              onChange={(event) => setRainbowDirection(event.target.checked ? 'reverse' : 'normal')}
+            />
+            <span>逆时针流动</span>
+          </label>
         </section>
       )}
 
       {showTools && (
         <section className="tool-card">
-          <div className="tool-header">批量重命名</div>
+          <div className="tool-header">Bulk rename</div>
           <div className="tool-grid">
             <label className="tool-field">
-              <span>旧关键字</span>
+              <span>Find text</span>
               <input
                 value={renameFind}
                 onChange={(event) => setRenameFind(event.target.value)}
-                placeholder="例如：old"
+                placeholder="e.g. old"
               />
             </label>
             <label className="tool-field">
-              <span>新关键字</span>
+              <span>Replace with</span>
               <input
                 value={renameReplace}
                 onChange={(event) => setRenameReplace(event.target.value)}
-                placeholder="例如：new"
+                placeholder="e.g. new"
               />
             </label>
             <label className="checkbox">
@@ -423,7 +482,7 @@ function App() {
                 checked={renameRecursive}
                 onChange={(event) => setRenameRecursive(event.target.checked)}
               />
-              <span>递归子目录</span>
+              <span>Include subdirectories</span>
             </label>
             <button
               type="button"
@@ -431,7 +490,7 @@ function App() {
               onClick={handleRename}
               disabled={renameLoading}
             >
-              {renameLoading ? '处理中...' : '开始重命名'}
+              {renameLoading ? 'Renaming...' : 'Start rename'}
             </button>
           </div>
           {renameStatus && <div className="status">{renameStatus}</div>}
@@ -440,14 +499,14 @@ function App() {
 
       {showTools && (
         <section className="tool-card">
-          <div className="tool-header">批量删除（名称含关键字）</div>
+          <div className="tool-header">Bulk delete (name contains keyword)</div>
           <div className="tool-grid">
             <label className="tool-field">
-              <span>关键字</span>
+              <span>Keyword</span>
               <input
                 value={deleteKeyword}
                 onChange={(event) => setDeleteKeyword(event.target.value)}
-                placeholder="例如：temp"
+                placeholder="e.g. temp"
               />
             </label>
             <label className="checkbox">
@@ -456,7 +515,7 @@ function App() {
                 checked={deleteRecursive}
                 onChange={(event) => setDeleteRecursive(event.target.checked)}
               />
-              <span>递归子目录</span>
+              <span>Include subdirectories</span>
             </label>
             <div className="tool-actions">
               <button
@@ -465,7 +524,7 @@ function App() {
                 onClick={() => runDelete(true)}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? '预览中...' : '预览匹配'}
+                {deleteLoading ? 'Previewing...' : 'Preview matches'}
               </button>
               <button
                 type="button"
@@ -473,7 +532,7 @@ function App() {
                 onClick={() => runDelete(false)}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? '处理中...' : '确认删除'}
+                {deleteLoading ? 'Deleting...' : 'Confirm delete'}
               </button>
             </div>
           </div>
@@ -495,7 +554,9 @@ function App() {
                 </div>
               )}
               {deletePreview.details.length > 10 && (
-                <div className="preview-more">前 10 条上方显示，剩余 {deletePreview.details.length - 10} 条按流式打印</div>
+                <div className="preview-more">
+                  First 10 shown above, remaining {deletePreview.details.length - 10} streamed below
+                </div>
               )}
             </div>
           )}
@@ -503,28 +564,28 @@ function App() {
       )}
 
       {error && <div className="status status-error">{error}</div>}
-      {!error && loading && <div className="status">加载中...</div>}
+      {!error && loading && <div className="status">Loading...</div>}
 
-      <div className="list">
-        <div className="list-header" style={{ gridTemplateColumns }}>
+      <div className="list" ref={listRef}>
+        <div className="list-header">
           <button
             type="button"
             className="header-btn"
             onClick={() => toggleSort('name')}
-            aria-label="按名称排序"
+            aria-label="Sort by name"
           >
-            名称
+            Name
             {sortField === 'name' && <span className="sort-arrow">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
           </button>
-          {showType && <span>类型</span>}
+          {showType && <span>Type</span>}
           {showModified && (
             <button
               type="button"
               className="header-btn"
               onClick={() => toggleSort('modified')}
-              aria-label="按修改时间排序"
+              aria-label="Sort by modified time"
             >
-              修改时间
+              Modified
               {sortField === 'modified' && (
                 <span className="sort-arrow">{sortOrder === 'asc' ? '↑' : '↓'}</span>
               )}
@@ -535,30 +596,24 @@ function App() {
               type="button"
               className="header-btn size-column"
               onClick={() => toggleSort('size')}
-              aria-label="按大小排序"
+              aria-label="Sort by size"
             >
-              大小
+              Size
               {sortField === 'size' && <span className="sort-arrow">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
             </button>
           )}
         </div>
         <div className="list-body">
           {visibleEntries.length === 0 && (
-            <div className="empty">{entries.length === 0 ? '空目录' : '无匹配文件'}</div>
+            <div className="empty">{entries.length === 0 ? 'Empty directory' : 'No matching files'}</div>
           )}
           {visibleEntries.map((entry) => (
-            <button
-              key={entry.path}
-              className="list-row"
-              style={{ gridTemplateColumns }}
-              onDoubleClick={() => openEntry(entry)}
-              title={entry.path}
-            >
+            <button key={entry.path} className="list-row" onDoubleClick={() => openEntry(entry)} title={entry.path}>
               <span className="name">
                 <span className="glyph">{entry.isDirectory ? '📁' : '📄'}</span>
                 {entry.name}
               </span>
-              {showType && <span>{entry.isDirectory ? '文件夹' : '文件'}</span>}
+              {showType && <span>{entry.isDirectory ? 'Folder' : 'File'}</span>}
               {showModified && <span>{formatDate(entry.modified)}</span>}
               {showSize && (
                 <span className="size-column">{entry.isDirectory ? '-' : formatSize(entry.size)}</span>

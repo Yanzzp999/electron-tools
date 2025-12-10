@@ -10,13 +10,20 @@ const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+const IS_DEV = Boolean(VITE_DEV_SERVER_URL);
+const IS_MAC = process.platform === "darwin";
 let win;
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname$1, "preload.mjs")
-    }
+    },
+    ...IS_MAC ? {
+      titleBarStyle: "hidden",
+      titleBarOverlay: false,
+      trafficLightPosition: { x: 12, y: 14 }
+    } : {}
   });
   win.webContents.on("did-finish-load", () => {
     win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
@@ -40,9 +47,9 @@ app.on("activate", () => {
 });
 app.whenReady().then(createWindow);
 function resolveTargetPath(targetPath) {
-  const home = app.getPath("home");
-  if (!targetPath) return home;
-  const expanded = targetPath === "~" || targetPath.startsWith("~/") || targetPath.startsWith("~\\") ? path.join(home, targetPath.slice(2)) : targetPath;
+  const baseDir = IS_DEV ? process.env.APP_ROOT ?? app.getPath("home") : app.getPath("home");
+  if (!targetPath) return baseDir;
+  const expanded = targetPath === "~" || targetPath.startsWith("~/") || targetPath.startsWith("~\\") ? path.join(baseDir, targetPath.slice(2)) : targetPath;
   return path.resolve(expanded);
 }
 ipcMain.handle("fs:list", async (_event, targetPath) => {

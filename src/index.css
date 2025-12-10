@@ -8,6 +8,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --rainbow-duration: 8s;
 }
 
 * {
@@ -19,4 +20,66 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #0f172a;
+  position: relative;
+  overflow: hidden; /* Prevent body scrollbar */
+}
+
+#root {
+  height: 100vh;
+  overflow-y: overlay; /* Allow scrolling inside #root with overlay scrollbar */
+  padding: 3px; /* Ensure content doesn't touch the border */
+}
+
+@property --rainbow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  padding: 3px; /* Border width */
+  border-radius: 10px;
+
+  background: conic-gradient(
+    from var(--rainbow-angle),
+    #ff3cac,
+    #fcb045,
+    #ffdd00,
+    #23d5ab,
+    #2b86c5,
+    #784ba0,
+    #ff3cac
+  );
+
+  animation: rainbow-spin var(--rainbow-duration, 8s) linear infinite var(--rainbow-direction, normal);
+
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.92;
+  box-shadow: 0 0 38px rgba(99, 102, 241, 0.18); /* Shadow might not rotate with color but that's ok */
+}
+
+@keyframes rainbow-spin {
+  to {
+    --rainbow-angle: 360deg;
+  }
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border-radius: 10px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(0, 0, 0, 0) 55%);
+  pointer-events: none;
+  z-index: 9998;
+  filter: blur(16px);
+  opacity: 0.7;
 }

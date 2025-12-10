@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import type { Dirent, Stats } from 'node:fs'
 import fs from 'node:fs/promises'
 
 const require = createRequire(import.meta.url)
@@ -25,6 +26,8 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+const IS_DEV = Boolean(VITE_DEV_SERVER_URL)
+const IS_MAC = process.platform === 'darwin'
 
 let win: BrowserWindow | null
 
@@ -34,6 +37,13 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
+    ...(IS_MAC
+      ? {
+          titleBarStyle: 'hidden',
+          titleBarOverlay: false,
+          trafficLightPosition: { x: 12, y: 14 },
+        }
+      : {}),
   })
 
   // Test active push message to Renderer-process.
@@ -130,12 +140,13 @@ type DeleteResult = {
 }
 
 function resolveTargetPath(targetPath?: string) {
-  const home = app.getPath('home')
-  if (!targetPath) return home
+  // In dev, default to project root to make testing paths easier; otherwise use user home.
+  const baseDir = IS_DEV ? process.env.APP_ROOT ?? app.getPath('home') : app.getPath('home')
+  if (!targetPath) return baseDir
 
   const expanded =
     targetPath === '~' || targetPath.startsWith('~/') || targetPath.startsWith('~\\')
-      ? path.join(home, targetPath.slice(2))
+      ? path.join(baseDir, targetPath.slice(2))
       : targetPath
 
   return path.resolve(expanded)
@@ -208,7 +219,7 @@ ipcMain.handle('fs:rename-bulk', async (_event, payload: RenameRequest): Promise
     }
   }
 
-  let rootStat: fs.Stats
+  let rootStat: Stats
   try {
     rootStat = await fs.stat(rootPath)
   } catch (error) {
@@ -242,7 +253,7 @@ ipcMain.handle('fs:rename-bulk', async (_event, payload: RenameRequest): Promise
 
   while (queue.length) {
     const current = queue.shift()!
-    let dirents: fs.Dirent[]
+    let dirents: Dirent[]
     try {
       dirents = await fs.readdir(current, { withFileTypes: true })
     } catch (error) {
@@ -319,7 +330,7 @@ ipcMain.handle('fs:delete-bulk', async (_event, payload: DeleteRequest): Promise
     }
   }
 
-  let rootStat: fs.Stats
+  let rootStat: Stats
   try {
     rootStat = await fs.stat(rootPath)
   } catch (error) {
@@ -352,7 +363,7 @@ ipcMain.handle('fs:delete-bulk', async (_event, payload: DeleteRequest): Promise
 
   while (queue.length) {
     const current = queue.shift()!
-    let dirents: fs.Dirent[]
+    let dirents: Dirent[]
     try {
       dirents = await fs.readdir(current, { withFileTypes: true })
     } catch (error) {
