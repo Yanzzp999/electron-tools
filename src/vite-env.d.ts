@@ -20,6 +20,7 @@ export type RenameRequest = {
   findText: string
   replaceText: string
   recursive?: boolean
+  dryRun?: boolean
 }
 
 export type RenameResult = {
@@ -53,6 +54,21 @@ export type DeleteResult = {
     deleted?: boolean
     error?: string
   }>
+  error?: string
+}
+
+export type SearchRequest = {
+  keyword: string
+  directory?: string
+  limit?: number
+  includeHidden?: boolean
+  ignoreSuffixes?: string[]
+}
+
+export type SearchResult = {
+  platform: NodeJS.Platform
+  engine: 'spotlight' | 'everything' | 'node' | 'unsupported'
+  entries: DirectoryEntry[]
   error?: string
 }
 
@@ -117,6 +133,7 @@ declare global {
       saveConfig: (config: AppConfigInput) => Promise<ConfigSnapshot>
       renameBulk: (payload: RenameRequest) => Promise<RenameResult>
       deleteBulk: (payload: DeleteRequest) => Promise<DeleteResult>
+      searchFiles: (payload: SearchRequest) => Promise<SearchResult>
     }
     ipcRenderer: Pick<
       typeof import('electron').ipcRenderer,

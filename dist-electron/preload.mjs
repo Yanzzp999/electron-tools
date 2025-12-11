@@ -35,5 +35,8 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   deleteBulk(payload) {
     return electron.ipcRenderer.invoke("fs:delete-bulk", payload);
+  },
+  searchFiles(payload) {
+    return electron.ipcRenderer.invoke("fs:search", payload);
   }
 });

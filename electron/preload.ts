@@ -38,10 +38,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     findText: string
     replaceText: string
     recursive?: boolean
+    dryRun?: boolean
   }) {
     return ipcRenderer.invoke('fs:rename-bulk', payload)
   },
   deleteBulk(payload: { rootPath?: string; keyword: string; recursive?: boolean; dryRun?: boolean }) {
     return ipcRenderer.invoke('fs:delete-bulk', payload)
+  },
+  searchFiles(payload: { keyword: string; directory?: string; limit?: number; includeHidden?: boolean; ignoreSuffixes?: string[] }) {
+    return ipcRenderer.invoke('fs:search', payload)
   },
 })

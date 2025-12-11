@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+import { execFile } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import path from "node:path";
 import fs from "node:fs/promises";
 import require$$0 from "process";
@@ -6888,6 +6890,7 @@ const IS_DEV = Boolean(VITE_DEV_SERVER_URL);
 const IS_MAC = process.platform === "darwin";
 const CONFIG_FILENAME = "app.config.yaml";
 const CONFIG_PATH = path.join(process.env.APP_ROOT, CONFIG_FILENAME);
+const execFileAsync = promisify(execFile);
 const DEFAULT_CONFIG = {
   startPath: "",
   hideHidden: true,
@@ -7067,6 +7070,98 @@ function resolveTargetPath(targetPath) {
   const expanded = targetPath === "~" || targetPath.startsWith("~/") || targetPath.startsWith("~\\") ? path.join(baseDir, targetPath.slice(2)) : targetPath;
   return path.resolve(expanded);
 }
+function normalizeIgnoreList(list) {
+  if (!(list == null ? void 0 : list.length)) return DEFAULT_CONFIG.ignoreSuffixes;
+  return list.map((item) => item.trim().toLowerCase()).filter(Boolean).map((item) => item.startsWith(".") ? item : `.${item}`);
+}
+function shouldSkipEntry(name, includeHidden, ignoreSuffixes) {
+  if (!includeHidden && name.startsWith(".")) return true;
+  const lower = name.toLowerCase();
+  return ignoreSuffixes.some((sfx) => lower.endsWith(sfx));
+}
+function buildSpotlightQueries(keyword) {
+  const escaped = keyword.replace(/["\\]/g, "\\$&");
+  return [`kMDItemFSName=="*${escaped}*"cd`, `*${escaped}*`];
+}
+async function searchWithSpotlight(payload) {
+  const keyword = (payload.keyword ?? "").trim();
+  const limit = Number.isFinite(payload.limit) ? Math.min(500, Math.max(1, Number(payload.limit))) : 200;
+  const includeHidden = Boolean(payload.includeHidden);
+  const ignoreSuffixes = normalizeIgnoreList(payload.ignoreSuffixes);
+  const scope = resolveTargetPath(payload.directory);
+  if (!keyword) {
+    return {
+      platform: "darwin",
+      engine: "spotlight",
+      entries: [],
+      error: "搜索关键词不能为空"
+    };
+  }
+  const queries = buildSpotlightQueries(keyword);
+  let lastError;
+  for (const query of queries) {
+    const args = ["-onlyin", scope, query];
+    try {
+      const { stdout, stderr } = await execFileAsync("mdfind", args, { maxBuffer: 10 * 1024 * 1024 });
+      if (stderr == null ? void 0 : stderr.trim()) lastError = stderr.trim();
+      const paths = stdout.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, limit);
+      const entries = [];
+      const stats = await Promise.allSettled(
+        paths.map(async (entryPath) => {
+          const name = path.basename(entryPath);
+          if (shouldSkipEntry(name, includeHidden, ignoreSuffixes)) return null;
+          const stat = await fs.stat(entryPath);
+          return {
+            name,
+            path: entryPath,
+            isDirectory: stat.isDirectory(),
+            size: stat.isDirectory() ? 0 : stat.size,
+            modified: stat.mtimeMs
+          };
+        })
+      );
+      for (const item of stats) {
+        if (item.status === "fulfilled" && item.value) {
+          entries.push(item.value);
+        }
+      }
+      return {
+        platform: "darwin",
+        engine: "spotlight",
+        entries
+      };
+    } catch (error) {
+      const stderr = error.stderr;
+      if (stderr) lastError = stderr.trim();
+      else lastError = error instanceof Error ? error.message : "Spotlight 查询失败";
+    }
+  }
+  return {
+    platform: "darwin",
+    engine: "spotlight",
+    entries: [],
+    error: lastError ?? "Spotlight 查询失败"
+  };
+}
+async function searchFiles(payload) {
+  if (IS_MAC) {
+    return searchWithSpotlight(payload);
+  }
+  if (process.platform === "win32") {
+    return {
+      platform: "win32",
+      engine: "unsupported",
+      entries: [],
+      error: "Windows 搜索未实现，请后续接入 Everything SDK"
+    };
+  }
+  return {
+    platform: process.platform,
+    engine: "unsupported",
+    entries: [],
+    error: "当前平台未提供搜索实现"
+  };
+}
 ipcMain.handle("fs:list", async (_event, targetPath) => {
   const resolvedPath = resolveTargetPath(targetPath);
   try {
@@ -7111,11 +7206,15 @@ ipcMain.handle("fs:list", async (_event, targetPath) => {
     };
   }
 });
+ipcMain.handle("fs:search", async (_event, payload) => {
+  return searchFiles(payload ?? { keyword: "" });
+});
 ipcMain.handle("fs:rename-bulk", async (_event, payload) => {
   const rootPath = resolveTargetPath(payload == null ? void 0 : payload.rootPath);
   const findText = (payload == null ? void 0 : payload.findText) ?? "";
   const replaceText = (payload == null ? void 0 : payload.replaceText) ?? "";
   const recursive = Boolean(payload == null ? void 0 : payload.recursive);
+  const dryRun = Boolean(payload == null ? void 0 : payload.dryRun);
   if (!findText.trim()) {
     return {
       root: rootPath,
@@ -7170,33 +7269,46 @@ ipcMain.handle("fs:rename-bulk", async (_event, payload) => {
     for (const dirent of dirents) {
       const originalPath = path.join(current, dirent.name);
       let nextPath = originalPath;
-      const nextName = dirent.name.replace(findText, replaceText);
-      const shouldRename = nextName !== dirent.name;
+      const proposedName = dirent.name.replace(findText, replaceText);
+      const shouldRename = proposedName !== dirent.name;
+      const targetPath = path.join(current, proposedName);
       if (shouldRename) {
-        const targetPath = path.join(current, nextName);
+        let exists = false;
         try {
-          try {
-            await fs.stat(targetPath);
-            throw new Error("Target name already exists");
-          } catch {
-          }
-          await fs.rename(originalPath, targetPath);
-          renamed += 1;
-          nextPath = targetPath;
-          details.push({ from: originalPath, to: targetPath });
-        } catch (error) {
+          await fs.stat(targetPath);
+          exists = true;
+        } catch {
+        }
+        if (exists) {
           failed += 1;
-          nextPath = originalPath;
           details.push({
             from: originalPath,
-            error: error instanceof Error ? error.message : "Rename failed"
+            to: targetPath,
+            error: "Target name already exists"
           });
+        } else if (dryRun) {
+          renamed += 1;
+          details.push({ from: originalPath, to: targetPath });
+        } else {
+          try {
+            await fs.rename(originalPath, targetPath);
+            renamed += 1;
+            nextPath = targetPath;
+            details.push({ from: originalPath, to: targetPath });
+          } catch (error) {
+            failed += 1;
+            nextPath = originalPath;
+            details.push({
+              from: originalPath,
+              error: error instanceof Error ? error.message : "Rename failed"
+            });
+          }
         }
       } else {
         skipped += 1;
       }
       if (recursive && dirent.isDirectory()) {
-        queue.push(nextPath);
+        queue.push(dryRun ? originalPath : nextPath);
       }
     }
   }

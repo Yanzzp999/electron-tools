@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { execFile } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 import path from 'node:path'
 import type { Dirent, Stats } from 'node:fs'
 import fs from 'node:fs/promises'
@@ -31,6 +33,7 @@ const IS_DEV = Boolean(VITE_DEV_SERVER_URL)
 const IS_MAC = process.platform === 'darwin'
 const CONFIG_FILENAME = 'app.config.yaml'
 const CONFIG_PATH = path.join(process.env.APP_ROOT, CONFIG_FILENAME)
+const execFileAsync = promisify(execFile)
 
 type AppConfigInput = {
   startPath?: string
@@ -332,6 +335,21 @@ type DeleteResult = {
   error?: string
 }
 
+type SearchQuery = {
+  keyword: string
+  directory?: string
+  limit?: number
+  includeHidden?: boolean
+  ignoreSuffixes?: string[]
+}
+
+type SearchSnapshot = {
+  platform: NodeJS.Platform
+  engine: 'spotlight' | 'everything' | 'node' | 'unsupported'
+  entries: DirectoryEntry[]
+  error?: string
+}
+
 ipcMain.handle('config:get', async (): Promise<ConfigSnapshot> => {
   return readConfigFile()
 })
@@ -360,6 +378,124 @@ function resolveTargetPath(targetPath?: string) {
       : targetPath
 
   return path.resolve(expanded)
+}
+
+function normalizeIgnoreList(list?: string[]) {
+  if (!list?.length) return DEFAULT_CONFIG.ignoreSuffixes
+  return list
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean)
+    .map((item) => (item.startsWith('.') ? item : `.${item}`))
+}
+
+function shouldSkipEntry(name: string, includeHidden: boolean, ignoreSuffixes: string[]) {
+  if (!includeHidden && name.startsWith('.')) return true
+  const lower = name.toLowerCase()
+  return ignoreSuffixes.some((sfx) => lower.endsWith(sfx))
+}
+
+function buildSpotlightQueries(keyword: string) {
+  const escaped = keyword.replace(/["\\]/g, '\\$&')
+  // 优先尝试 metadata 查询，其次使用兼容性更好的简单查询（无需额外引号）
+  return [`kMDItemFSName=="*${escaped}*"cd`, `*${escaped}*`]
+}
+
+async function searchWithSpotlight(payload: SearchQuery): Promise<SearchSnapshot> {
+  const keyword = (payload.keyword ?? '').trim()
+  const limit = Number.isFinite(payload.limit) ? Math.min(500, Math.max(1, Number(payload.limit))) : 200
+  const includeHidden = Boolean(payload.includeHidden)
+  const ignoreSuffixes = normalizeIgnoreList(payload.ignoreSuffixes)
+  const scope = resolveTargetPath(payload.directory)
+
+  if (!keyword) {
+    return {
+      platform: 'darwin',
+      engine: 'spotlight',
+      entries: [],
+      error: '搜索关键词不能为空',
+    }
+  }
+
+  const queries = buildSpotlightQueries(keyword)
+  let lastError: string | undefined
+
+  for (const query of queries) {
+    const args = ['-onlyin', scope, query]
+    try {
+      const { stdout, stderr } = await execFileAsync('mdfind', args, { maxBuffer: 10 * 1024 * 1024 })
+      if (stderr?.trim()) lastError = stderr.trim()
+
+      const paths = stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, limit)
+
+      const entries: DirectoryEntry[] = []
+
+      const stats = await Promise.allSettled(
+        paths.map(async (entryPath) => {
+          const name = path.basename(entryPath)
+          if (shouldSkipEntry(name, includeHidden, ignoreSuffixes)) return null
+          const stat = await fs.stat(entryPath)
+          return {
+            name,
+            path: entryPath,
+            isDirectory: stat.isDirectory(),
+            size: stat.isDirectory() ? 0 : stat.size,
+            modified: stat.mtimeMs,
+          } satisfies DirectoryEntry
+        }),
+      )
+
+      for (const item of stats) {
+        if (item.status === 'fulfilled' && item.value) {
+          entries.push(item.value)
+        }
+      }
+
+      // 成功返回（即使为空结果也视为成功）
+      return {
+        platform: 'darwin',
+        engine: 'spotlight',
+        entries,
+      }
+    } catch (error) {
+      const stderr = (error as { stderr?: string }).stderr
+      if (stderr) lastError = stderr.trim()
+      else lastError = error instanceof Error ? error.message : 'Spotlight 查询失败'
+      // 尝试下一种查询
+    }
+  }
+
+  return {
+    platform: 'darwin',
+    engine: 'spotlight',
+    entries: [],
+    error: lastError ?? 'Spotlight 查询失败',
+  }
+}
+
+async function searchFiles(payload: SearchQuery): Promise<SearchSnapshot> {
+  if (IS_MAC) {
+    return searchWithSpotlight(payload)
+  }
+
+  if (process.platform === 'win32') {
+    return {
+      platform: 'win32',
+      engine: 'unsupported',
+      entries: [],
+      error: 'Windows 搜索未实现，请后续接入 Everything SDK',
+    }
+  }
+
+  return {
+    platform: process.platform,
+    engine: 'unsupported',
+    entries: [],
+    error: '当前平台未提供搜索实现',
+  }
 }
 
 ipcMain.handle('fs:list', async (_event, targetPath?: string): Promise<DirectorySnapshot> => {
@@ -412,11 +548,16 @@ ipcMain.handle('fs:list', async (_event, targetPath?: string): Promise<Directory
   }
 })
 
+ipcMain.handle('fs:search', async (_event, payload: SearchQuery): Promise<SearchSnapshot> => {
+  return searchFiles(payload ?? { keyword: '' })
+})
+
 ipcMain.handle('fs:rename-bulk', async (_event, payload: RenameRequest): Promise<RenameResult> => {
   const rootPath = resolveTargetPath(payload?.rootPath)
   const findText = payload?.findText ?? ''
   const replaceText = payload?.replaceText ?? ''
   const recursive = Boolean(payload?.recursive)
+  const dryRun = Boolean(payload?.dryRun)
 
   if (!findText.trim()) {
     return {
@@ -479,37 +620,50 @@ ipcMain.handle('fs:rename-bulk', async (_event, payload: RenameRequest): Promise
       const originalPath = path.join(current, dirent.name)
       let nextPath = originalPath
 
-      const nextName = dirent.name.replace(findText, replaceText)
-      const shouldRename = nextName !== dirent.name
+      const proposedName = dirent.name.replace(findText, replaceText)
+      const shouldRename = proposedName !== dirent.name
+      const targetPath = path.join(current, proposedName)
 
       if (shouldRename) {
-        const targetPath = path.join(current, nextName)
+        let exists = false
         try {
-          // Avoid collisions
-          try {
-            await fs.stat(targetPath)
-            throw new Error('Target name already exists')
-          } catch {
-            // ok if not exists
-          }
-          await fs.rename(originalPath, targetPath)
-          renamed += 1
-          nextPath = targetPath
-          details.push({ from: originalPath, to: targetPath })
-        } catch (error) {
+          await fs.stat(targetPath)
+          exists = true
+        } catch {
+          // target not found, safe to proceed
+        }
+
+        if (exists) {
           failed += 1
-          nextPath = originalPath
           details.push({
             from: originalPath,
-            error: error instanceof Error ? error.message : 'Rename failed',
+            to: targetPath,
+            error: 'Target name already exists',
           })
+        } else if (dryRun) {
+          renamed += 1
+          details.push({ from: originalPath, to: targetPath })
+        } else {
+          try {
+            await fs.rename(originalPath, targetPath)
+            renamed += 1
+            nextPath = targetPath
+            details.push({ from: originalPath, to: targetPath })
+          } catch (error) {
+            failed += 1
+            nextPath = originalPath
+            details.push({
+              from: originalPath,
+              error: error instanceof Error ? error.message : 'Rename failed',
+            })
+          }
         }
       } else {
         skipped += 1
       }
 
       if (recursive && dirent.isDirectory()) {
-        queue.push(nextPath)
+        queue.push(dryRun ? originalPath : nextPath)
       }
     }
   }
