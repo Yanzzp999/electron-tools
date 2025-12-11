@@ -51,6 +51,8 @@ type AppConfigInput = {
   rainbow?: {
     speed?: number
     direction?: 'normal' | 'reverse'
+    width?: number
+    brightness?: number
   }
   tools?: {
     rename?: { recursive?: boolean }
@@ -74,6 +76,8 @@ type ResolvedAppConfig = {
   rainbow: {
     speed: number
     direction: 'normal' | 'reverse'
+    width: number
+    brightness: number
   }
   tools: {
     rename: { recursive: boolean }
@@ -104,6 +108,8 @@ const DEFAULT_CONFIG: ResolvedAppConfig = {
   rainbow: {
     speed: 8,
     direction: 'normal',
+    width: 3,
+    brightness: 0.92,
   },
   tools: {
     rename: { recursive: true },
@@ -152,8 +158,10 @@ function normalizeConfig(raw?: AppConfigInput): ResolvedAppConfig {
       order: sort.order === 'desc' ? 'desc' : DEFAULT_CONFIG.sort.order,
     },
     rainbow: {
-      speed: clampNumber(rainbow.speed, DEFAULT_CONFIG.rainbow.speed, 1, 60),
+      speed: clampNumber(rainbow.speed, DEFAULT_CONFIG.rainbow.speed, 0, 100),
       direction: rainbow.direction === 'reverse' ? 'reverse' : DEFAULT_CONFIG.rainbow.direction,
+      width: clampNumber(rainbow.width, DEFAULT_CONFIG.rainbow.width, 1, 20),
+      brightness: clampNumber(rainbow.brightness, DEFAULT_CONFIG.rainbow.brightness, 0.1, 1),
     },
     tools: {
       rename: {

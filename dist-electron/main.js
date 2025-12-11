@@ -6906,7 +6906,9 @@ const DEFAULT_CONFIG = {
   },
   rainbow: {
     speed: 8,
-    direction: "normal"
+    direction: "normal",
+    width: 3,
+    brightness: 0.92
   },
   tools: {
     rename: { recursive: true },
@@ -6948,8 +6950,10 @@ function normalizeConfig(raw) {
       order: sort.order === "desc" ? "desc" : DEFAULT_CONFIG.sort.order
     },
     rainbow: {
-      speed: clampNumber(rainbow.speed, DEFAULT_CONFIG.rainbow.speed, 1, 60),
-      direction: rainbow.direction === "reverse" ? "reverse" : DEFAULT_CONFIG.rainbow.direction
+      speed: clampNumber(rainbow.speed, DEFAULT_CONFIG.rainbow.speed, 0, 100),
+      direction: rainbow.direction === "reverse" ? "reverse" : DEFAULT_CONFIG.rainbow.direction,
+      width: clampNumber(rainbow.width, DEFAULT_CONFIG.rainbow.width, 1, 20),
+      brightness: clampNumber(rainbow.brightness, DEFAULT_CONFIG.rainbow.brightness, 0.1, 1)
     },
     tools: {
       rename: {

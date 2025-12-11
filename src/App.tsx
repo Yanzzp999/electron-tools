@@ -9,6 +9,33 @@ import type {
 } from './vite-env'
 import './App.css'
 
+const RAINBOW_MIN_RPS = 0.075
+const RAINBOW_MAX_RPS = 4
+const RAINBOW_SLIDER_MIN = 0
+const RAINBOW_SLIDER_MAX = 100
+const RAINBOW_BORDER_MIN = 1
+const RAINBOW_BORDER_MAX = 20
+const RAINBOW_BRIGHTNESS_MIN = 0.1
+const RAINBOW_BRIGHTNESS_MAX = 1
+
+function sliderToRps(value: number) {
+  const clamped = Math.min(RAINBOW_SLIDER_MAX, Math.max(RAINBOW_SLIDER_MIN, value))
+  const t = (clamped - RAINBOW_SLIDER_MIN) / (RAINBOW_SLIDER_MAX - RAINBOW_SLIDER_MIN)
+  return RAINBOW_MIN_RPS * Math.pow(RAINBOW_MAX_RPS / RAINBOW_MIN_RPS, t)
+}
+
+function rpsToSlider(rps: number) {
+  const clamped = Math.min(RAINBOW_MAX_RPS, Math.max(RAINBOW_MIN_RPS, rps))
+  const t = Math.log(clamped / RAINBOW_MIN_RPS) / Math.log(RAINBOW_MAX_RPS / RAINBOW_MIN_RPS)
+  return RAINBOW_SLIDER_MIN + t * (RAINBOW_SLIDER_MAX - RAINBOW_SLIDER_MIN)
+}
+
+function formatRps(rps: number) {
+  if (rps >= 10) return rps.toFixed(0)
+  if (rps >= 1) return rps.toFixed(1)
+  return rps.toFixed(2)
+}
+
 const Icon = {
   Back: () => (
     <svg className="icon" viewBox="0 0 24 24">
@@ -177,7 +204,9 @@ function App() {
   }, [isResizing])
 
   // Rainbow settings
-  const [rainbowSpeed, setRainbowSpeed] = useState(8)
+  const [rainbowSpeedSlider, setRainbowSpeedSlider] = useState(8)
+  const [rainbowBorderWidth, setRainbowBorderWidth] = useState(3)
+  const [rainbowBrightness, setRainbowBrightness] = useState(0.92)
   const [rainbowDirection, setRainbowDirection] = useState<'normal' | 'reverse'>('normal')
 
   // New state for modal tools
@@ -263,15 +292,26 @@ function App() {
     setDeleteRecursive(config.tools.delete.recursive)
     // Add safe check for rainbow config if it exists in type, otherwise default
     if (config.rainbow) {
-      setRainbowSpeed(config.rainbow.speed)
+      setRainbowSpeedSlider(rpsToSlider(sliderToRps(config.rainbow.speed)))
       setRainbowDirection(config.rainbow.direction)
+      setRainbowBorderWidth(config.rainbow.width)
+      setRainbowBrightness(config.rainbow.brightness)
     }
   }, [])
 
+  const rainbowRps = useMemo(() => sliderToRps(rainbowSpeedSlider), [rainbowSpeedSlider])
+
+  const rainbowSpeedLabel = useMemo(() => formatRps(rainbowRps), [rainbowRps])
+  const rainbowBrightnessLabel = useMemo(() => rainbowBrightness.toFixed(2), [rainbowBrightness])
+
   useEffect(() => {
-    document.documentElement.style.setProperty('--rainbow-duration', `${rainbowSpeed}s`)
+    const duration = rainbowRps > 0 ? 1 / rainbowRps : 10
+    document.documentElement.style.setProperty('--rainbow-duration', `${duration}s`)
     document.documentElement.style.setProperty('--rainbow-direction', rainbowDirection)
-  }, [rainbowSpeed, rainbowDirection])
+    document.documentElement.style.setProperty('--rainbow-border-width', `${rainbowBorderWidth}px`)
+    document.documentElement.style.setProperty('--rainbow-border-opacity', `${rainbowBrightness}`)
+    document.documentElement.style.setProperty('--rainbow-border-glow', `${(0.18 * rainbowBrightness).toFixed(3)}`)
+  }, [rainbowBorderWidth, rainbowBrightness, rainbowDirection, rainbowRps])
 
   useEffect(() => {
     document.documentElement.style.setProperty('--columns', gridTemplateColumns)
@@ -383,34 +423,53 @@ function App() {
     [loadDirectory],
   )
 
-  const handleRename = useCallback(async () => {
-    if (!currentPath) {
-      setRenameStatus('Select a path first')
-      return
-    }
-    if (!renameFind.trim()) {
-      setRenameStatus('Enter text to replace')
-      return
-    }
+  const runRename = useCallback(
+    async (dryRun: boolean) => {
+      if (!currentPath) {
+        setRenameStatus('Select a path first')
+        return
+      }
+      if (!renameFind.trim()) {
+        setRenameStatus('Enter text to replace')
+        return
+      }
 
-    setRenameLoading(true)
-    setRenameStatus(null)
-    const result = (await window.electronAPI.renameBulk({
-      rootPath: currentPath,
-      findText: renameFind,
-      replaceText: renameReplace,
-      recursive: renameRecursive,
-    })) as RenameResult
-    setRenameLoading(false)
+      setRenameLoading(true)
+      setRenameStatus(null)
 
-    if (result.error) {
-      setRenameStatus(`Rename failed: ${result.error}`)
-      return
-    }
+      try {
+        const result = (await window.electronAPI.renameBulk({
+          rootPath: currentPath,
+          findText: renameFind,
+          replaceText: renameReplace,
+          recursive: renameRecursive,
+          dryRun,
+        })) as RenameResult
 
-    setRenameStatus(`Done: success ${result.renamed}, failed ${result.failed}, skipped ${result.skipped}`)
-    loadDirectory(currentPath, false)
-  }, [currentPath, loadDirectory, renameFind, renameRecursive, renameReplace])
+        if (result.error) {
+          setRenameStatus(`Rename failed: ${result.error}`)
+          return
+        }
+
+        if (dryRun) {
+          setRenamePreview(result)
+          setRenameStatus(`Preview: will rename ${result.renamed}, failed ${result.failed}, skipped ${result.skipped}`)
+        } else {
+          setRenamePreview(null)
+          setRenameStatus(`Done: success ${result.renamed}, failed ${result.failed}, skipped ${result.skipped}`)
+          loadDirectory(currentPath, false)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Rename failed'
+        setRenameStatus(`Rename failed: ${message}`)
+      } finally {
+        setRenameLoading(false)
+      }
+    },
+    [currentPath, loadDirectory, renameFind, renameRecursive, renameReplace],
+  )
+
+  const handleRename = useCallback(() => runRename(false), [runRename])
 
   const runDelete = useCallback(
     async (dryRun: boolean) => {
@@ -696,15 +755,42 @@ function App() {
             <div className="field-group" style={{ marginTop: 16 }}>
               <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8, fontWeight: 600 }}>Rainbow Border</div>
               <label>
-                <span style={{ fontSize: 13, marginRight: 8 }}>Speed ({rainbowSpeed}s)</span>
+                <span style={{ fontSize: 13, marginRight: 8 }}>Speed: {rainbowSpeedLabel}（圈/秒）</span>
                 <input
                   type="range"
-                  min="1"
-                  max="20"
-                  step="0.5"
-                  value={rainbowSpeed}
-                  onChange={e => setRainbowSpeed(Number(e.target.value))}
+                  min={RAINBOW_SLIDER_MIN}
+                  max={RAINBOW_SLIDER_MAX}
+                  step={1}
+                  value={rainbowSpeedSlider}
+                  onChange={e => setRainbowSpeedSlider(Number(e.target.value))}
                   style={{ width: '100%', accentColor: '#a8c7fa' }}
+                  title={`圈速 ≈ ${rainbowSpeedLabel} 圈/秒（非线性：滑块后段加速更快）`}
+                />
+              </label>
+              <label>
+                <span style={{ fontSize: 13, marginRight: 8 }}>Width: {rainbowBorderWidth.toFixed(1)} px</span>
+                <input
+                  type="range"
+                  min={RAINBOW_BORDER_MIN}
+                  max={RAINBOW_BORDER_MAX}
+                  step={0.5}
+                  value={rainbowBorderWidth}
+                  onChange={e => setRainbowBorderWidth(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#a8c7fa' }}
+                  title="调整边框宽度"
+                />
+              </label>
+              <label>
+                <span style={{ fontSize: 13, marginRight: 8 }}>Brightness: {rainbowBrightnessLabel}</span>
+                <input
+                  type="range"
+                  min={RAINBOW_BRIGHTNESS_MIN}
+                  max={RAINBOW_BRIGHTNESS_MAX}
+                  step={0.01}
+                  value={rainbowBrightness}
+                  onChange={e => setRainbowBrightness(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#a8c7fa' }}
+                  title="调整边框亮度"
                 />
               </label>
               <label>
@@ -744,11 +830,32 @@ function App() {
               </label>
 
               {renameStatus && <div style={{ fontSize: 13, color: '#aaa', marginTop: 8 }}>{renameStatus}</div>}
+              {renamePreview && (
+                <div style={{ maxHeight: 160, overflow: 'auto', background: '#111', padding: 8, borderRadius: 4, fontSize: 12, border: '1px solid #333', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {renamePreview.details.length === 0 ? (
+                    <div style={{ opacity: 0.7 }}>No matches found</div>
+                  ) : (
+                    <>
+                      {renamePreview.details.slice(0, 50).map((d, i) => (
+                        <div key={i} style={{ lineHeight: 1.4 }}>
+                          <div>{d.from}</div>
+                          {d.to && <div style={{ color: '#a8c7fa' }}>→ {d.to}</div>}
+                          {d.error && <div style={{ color: '#e57373' }}>⚠ {d.error}</div>}
+                        </div>
+                      ))}
+                      {renamePreview.details.length > 50 && <div>...and more</div>}
+                    </>
+                  )}
+                </div>
+              )}
 
               <div className="modal-actions">
                 <button className="btn btn-text" onClick={() => setActiveTool(null)}>Cancel</button>
+                <button className="btn btn-secondary" onClick={() => runRename(true)} disabled={renameLoading}>
+                  Preview
+                </button>
                 <button className="btn btn-primary" onClick={handleRename} disabled={renameLoading}>
-                  {renameLoading ? 'Renaming...' : 'Rename'}
+                  {renameLoading ? 'Working...' : 'Rename'}
                 </button>
               </div>
             </div>

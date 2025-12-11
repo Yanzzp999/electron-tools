@@ -88,6 +88,8 @@ export type AppConfigInput = {
   rainbow?: {
     speed?: number
     direction?: 'normal' | 'reverse'
+    width?: number
+    brightness?: number
   }
   tools?: {
     rename?: { recursive?: boolean }
@@ -111,6 +113,8 @@ export type ResolvedAppConfig = {
   rainbow: {
     speed: number
     direction: 'normal' | 'reverse'
+    width: number
+    brightness: number
   }
   tools: {
     rename: { recursive: boolean }

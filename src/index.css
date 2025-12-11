@@ -9,6 +9,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   --rainbow-duration: 8s;
+  --rainbow-border-width: 3px;
+  --rainbow-border-opacity: 0.92;
+  --rainbow-border-glow: 0.18;
 }
 
 * {
@@ -40,7 +43,7 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  padding: 3px; /* Border width */
+  padding: var(--rainbow-border-width, 3px); /* Border width */
   border-radius: 10px;
 
   background: conic-gradient(
@@ -62,8 +65,8 @@ body::before {
 
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.92;
-  box-shadow: 0 0 38px rgba(99, 102, 241, 0.18); /* Shadow might not rotate with color but that's ok */
+  opacity: var(--rainbow-border-opacity, 0.92);
+  box-shadow: 0 0 38px rgba(99, 102, 241, var(--rainbow-border-glow, 0.18)); /* Shadow might not rotate with color but that's ok */
 }
 
 @keyframes rainbow-spin {
