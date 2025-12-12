@@ -6,6 +6,7 @@ import type {
   RenameResult,
   ResolvedAppConfig,
   SearchResult,
+  AppConfigInput,
 } from './vite-env'
 import './App.css'
 
@@ -140,6 +141,7 @@ function App() {
   const [configMeta, setConfigMeta] = useState<{ path: string; exists: boolean } | null>(null)
   const [configError, setConfigError] = useState<string | null>(null)
   const [configLoading, setConfigLoading] = useState(false)
+  const [savedStartPath, setSavedStartPath] = useState('')
   const firstLoadRef = useRef(true)
   const [hideHidden, setHideHidden] = useState(true)
   const [ignoreInput, setIgnoreInput] = useState('.exe,.app')
@@ -290,6 +292,7 @@ function App() {
     setSortOrder(config.sort.order)
     setRenameRecursive(config.tools.rename.recursive)
     setDeleteRecursive(config.tools.delete.recursive)
+    setSavedStartPath(config.startPath || '')
     // Add safe check for rainbow config if it exists in type, otherwise default
     if (config.rainbow) {
       setRainbowSpeedSlider(rpsToSlider(sliderToRps(config.rainbow.speed)))
@@ -298,6 +301,55 @@ function App() {
       setRainbowBrightness(config.rainbow.brightness)
     }
   }, [])
+
+  const saveCurrentConfig = useCallback(async () => {
+    const config: AppConfigInput = {
+      startPath: savedStartPath,
+      hideHidden,
+      ignoreSuffixes: ignoreInput,
+      columns: {
+        showType,
+        showModified,
+        showSize,
+      },
+      sort: {
+        field: sortField,
+        order: sortOrder,
+      },
+      rainbow: {
+        speed: rainbowSpeedSlider,
+        direction: rainbowDirection,
+        width: rainbowBorderWidth,
+        brightness: rainbowBrightness,
+      },
+      tools: {
+        rename: { recursive: renameRecursive },
+        delete: { recursive: deleteRecursive },
+      },
+    }
+
+    try {
+      await window.electronAPI.saveConfig(config)
+    } catch (error) {
+      console.error('Failed to save config:', error)
+      // Optional: show error toast
+    }
+  }, [
+    savedStartPath,
+    hideHidden,
+    ignoreInput,
+    showType,
+    showModified,
+    showSize,
+    sortField,
+    sortOrder,
+    rainbowSpeedSlider,
+    rainbowDirection,
+    rainbowBorderWidth,
+    rainbowBrightness,
+    renameRecursive,
+    deleteRecursive,
+  ])
 
   const rainbowRps = useMemo(() => sliderToRps(rainbowSpeedSlider), [rainbowSpeedSlider])
 
@@ -804,7 +856,15 @@ function App() {
             </div>
 
             <div className="modal-actions">
-              <button className="btn btn-primary" onClick={() => setShowFilters(false)}>Done</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  saveCurrentConfig()
+                  setShowFilters(false)
+                }}
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

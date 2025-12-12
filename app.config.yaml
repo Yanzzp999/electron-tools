@@ -1,4 +1,3 @@
-# App configuration; click "Reload config" in UI after editing
 startPath: ""
 hideHidden: true
 ignoreSuffixes:
@@ -12,8 +11,10 @@ sort:
   field: name
   order: asc
 rainbow:
-  speed: 2
+  speed: 2.000000000000001
   direction: normal
+  width: 10.5
+  brightness: 0.37
 tools:
   rename:
     recursive: true
